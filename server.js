@@ -12,17 +12,24 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Подключение к MongoDB
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/contactbook';
+// Подключение к MongoDB (исправленная версия)
+const MONGODB_URI = process.env.MONGODB_URI;
 
-mongoose.connect(MONGODB_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
+// Более простое подключение без устаревших опций
+mongoose.connect(MONGODB_URI)
+.then(() => {
+  console.log('MongoDB подключена успешно');
+  console.log(`База данных: ${mongoose.connection.db.databaseName}`);
 })
-.then(() => console.log('MongoDB подключена успешно'))
-.catch(err => console.log('Ошибка подключения к MongoDB:', err));
+.catch(err => {
+  console.log('Ошибка подключения к MongoDB:', err.message);
+  console.log('Проверьте:');
+  console.log('   - Правильность username и password');
+  console.log('   - Наличие сети "Allow Access from Anywhere" в MongoDB Atlas');
+  console.log('   - Правильность connection string');
+});
 
-// Модель контакта
+// Модель контакта и остальной код остается без изменений...
 const contactSchema = new mongoose.Schema({
   username: { type: String, required: true },
   email: { type: String, required: true },
@@ -36,6 +43,22 @@ const contactSchema = new mongoose.Schema({
 
 const Contact = mongoose.model('Contact', contactSchema);
 
+// Маршруты API (остаются без изменений)
+app.get('/api/contacts', async (req, res) => {
+  try {
+    const contacts = await Contact.find().sort({ createdAt: -1 });
+    res.json({
+      success: true,
+      data: contacts,
+      count: contacts.length
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
 // Маршруты API
 // GET /api/contacts - получить все контакты
 app.get('/api/contacts', async (req, res) => {
@@ -214,6 +237,5 @@ app.get('/', (req, res) => {
 
 app.listen(PORT, () => {
   console.log(`Сервер запущен на порту ${PORT}`);
-  console.log(`MongoDB статус: ${mongoose.connection.readyState === 1 ? 'Connected' : 'Disconnected'}`);
-  console.log(`Frontend доступен: http://localhost:${PORT}`);
+  console.log(`Приложение доступно: https://iip-pract5.onrender.com`);
 });
